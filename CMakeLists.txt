@@ -31,3 +31,7 @@ ament_package()
 install(DIRECTORY launch urdf meshes
   DESTINATION share/${PROJECT_NAME}
 )
+install(PROGRAMS
+  scripts/mecanum_kinematics.py
+  DESTINATION lib/${PROJECT_NAME}
+)

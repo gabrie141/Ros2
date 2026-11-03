@@ -1,127 +1,210 @@
 <?xml version="1.0"?>
-<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="mecanum_forklift_robot">
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:gz="http://gazebosim.org/schema" name="mi_montacargas">
 
-  <material name="white"><color rgba="1.0 1.0 1.0 1.0"/></material>
-  <material name="dark_grey"><color rgba="0.2 0.2 0.2 1.0"/></material>
-  <material name="light_grey"><color rgba="0.7 0.7 0.7 1.0"/></material>
+  <!-- MATERIALES VISUALES -->
+  <material name="chassis_white"><color rgba="0.92 0.92 0.95 1.0"/></material>
+  <material name="palette_grey"><color rgba="0.55 0.55 0.58 1.0"/></material>
+  <material name="wheel_dark"><color rgba="0.12 0.12 0.12 1.0"/></material>
 
+  <!-- 1. BASE FOOTPRINT -->
   <link name="base_footprint"/>
+
   <joint name="base_footprint_joint" type="fixed">
     <parent link="base_footprint"/>
     <child link="base_link"/>
-    <origin xyz="0.0 0.0 0.035" rpy="0 0 0"/> <!-- Elevado 3.5cm para evitar que el chasis roce -->
+    <origin xyz="0.0 0.0 0.029" rpy="0 0 0"/>
   </joint>
 
+  <!-- 2. CHASIS PRINCIPAL -->
   <link name="base_link">
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry><mesh filename="package://mi_montacargas/meshes/base_link.stl" scale="1 1 1"/></geometry>
-      <material name="white"/>
+      <geometry>
+        <mesh filename="package://mi_montacargas/meshes/base_link.stl" scale="1 1 1"/>
+      </geometry>
+      <material name="chassis_white"/>
     </visual>
     <collision>
       <origin xyz="0.0 0.0 0.129" rpy="0 0 0"/>
-      <geometry><box size="0.180 0.180 0.258"/></geometry>
+      <geometry>
+        <box size="0.180 0.180 0.258"/>
+      </geometry>
     </collision>
+    <!-- CoG centrado en X/Y para evitar cabeceo y deriva en giros -->
     <inertial>
-      <origin xyz="0.004392 0.000901 0.097727" rpy="0 0 0"/>
+      <origin xyz="0.0 0.0 0.097727" rpy="0 0 0"/>
       <mass value="1.224"/>
-      <inertia ixx="0.011928" ixy="0.0" ixz="0.0" iyy="0.012725" iyz="0.0" izz="0.007489"/>
+      <inertia ixx="0.011928" ixy="0.0" ixz="0.0"
+               iyy="0.012725" iyz="0.0"
+               izz="0.007489"/>
     </inertial>
   </link>
 
+  <!-- 3. PALETA ELEVADORA -->
   <link name="fork_link">
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry><mesh filename="package://mi_montacargas/meshes/fork_link.stl" scale="1 1 1"/></geometry>
-      <material name="light_grey"/>
+      <geometry>
+        <mesh filename="package://mi_montacargas/meshes/fork_link.stl" scale="1 1 1"/>
+      </geometry>
+      <material name="palette_grey"/>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry><mesh filename="package://mi_montacargas/meshes/fork_link.stl" scale="1 1 1"/></geometry>
+      <geometry>
+        <mesh filename="package://mi_montacargas/meshes/fork_link.stl" scale="1 1 1"/>
+      </geometry>
     </collision>
     <inertial>
-      <origin xyz="0.029416 -0.000966 -0.017260" rpy="0 0 0"/>
+      <origin xyz="0.029416 0.0 -0.017260" rpy="0 0 0"/>
       <mass value="0.051"/>
-      <inertia ixx="0.00001971" ixy="0.0" ixz="0.0" iyy="0.00007343" iyz="0.0" izz="0.00008768"/>
+      <inertia ixx="0.00001971" ixy="0.0" ixz="0.0"
+               iyy="0.00007343" iyz="0.0"
+               izz="0.00008768"/>
     </inertial>
   </link>
+
   <joint name="fork_joint" type="prismatic">
     <parent link="base_link"/>
     <child link="fork_link"/>
     <origin xyz="0.080 0.0 0.010" rpy="0 0 0"/>
     <axis xyz="0 0 1"/>
-    <limit lower="0.0" upper="0.158" effort="10.0" velocity="0.15"/>
+    <limit lower="0.0" upper="0.158" effort="20.0" velocity="0.15"/>
     <dynamics damping="0.5" friction="0.1"/>
   </joint>
 
-  <xacro:macro name="mecanum_wheel" params="prefix x_pos y_pos">
+  <!-- 4. MACRO PARA LAS 4 RUEDAS MECANUM -->
+  <xacro:macro name="mecanum_wheel" params="prefix x_pos y_pos mesh_file">
     <link name="${prefix}_wheel_link">
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0"/>
-        <geometry><mesh filename="package://mi_montacargas/meshes/wheel.stl" scale="1 1 1"/></geometry>
-        <material name="dark_grey"/>
+        <geometry>
+          <mesh filename="package://mi_montacargas/meshes/${mesh_file}" scale="1 1 1"/>
+        </geometry>
+        <material name="wheel_dark"/>
       </visual>
       <collision>
         <origin xyz="0 0 0" rpy="1.570796 0 0"/>
-        <geometry><cylinder radius="0.029" length="0.024"/></geometry>
+        <geometry>
+          <cylinder radius="0.029" length="0.024"/>
+        </geometry>
       </collision>
       <inertial>
         <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
         <mass value="0.050"/>
-        <inertia ixx="0.00001252" ixy="0.0" ixz="0.0" iyy="0.00001976" iyz="0.0" izz="0.00001252"/>
+        <inertia ixx="0.00001252" ixy="0.0" ixz="0.0"
+                 iyy="0.00001976" iyz="0.0"
+                 izz="0.00001252"/>
       </inertial>
     </link>
+
     <joint name="${prefix}_wheel_joint" type="continuous">
       <parent link="base_link"/>
       <child link="${prefix}_wheel_link"/>
       <origin xyz="${x_pos} ${y_pos} 0.0" rpy="0 0 0"/>
       <axis xyz="0 1 0"/>
-      <limit effort="20.0" velocity="10.0"/> <!-- Límite necesario para Gazebo -->
-      <dynamics damping="0.05" friction="0.05"/>
+      <limit effort="20.0" velocity="20.0"/>
+      <dynamics damping="0.01" friction="0.0"/>
     </joint>
+
+    <!-- Deslizamiento sin friccion lateral parasita para que no desvie la trayectoria -->
     <gazebo reference="${prefix}_wheel_link">
-      <!-- Fricción estándar alta para que traccionen -->
-      <mu1>1.0</mu1>
-      <mu2>1.0</mu2>
-      <kp>1000000.0</kp>
-      <kd>100.0</kd>
+      <mu1>0.0</mu1>
+      <mu2>0.0</mu2>
     </gazebo>
   </xacro:macro>
 
-  <xacro:mecanum_wheel prefix="fl" x_pos="0.057"  y_pos="0.106"/>
-  <xacro:mecanum_wheel prefix="fr" x_pos="0.057"  y_pos="-0.106"/>
-  <xacro:mecanum_wheel prefix="rl" x_pos="-0.057" y_pos="0.106"/>
-  <xacro:mecanum_wheel prefix="rr" x_pos="-0.057" y_pos="-0.106"/>
+  <xacro:mecanum_wheel prefix="fl" x_pos="0.057"  y_pos="0.106"  mesh_file="wheel.stl"/>
+  <xacro:mecanum_wheel prefix="fr" x_pos="0.057"  y_pos="-0.106" mesh_file="wheel.stl"/>
+  <xacro:mecanum_wheel prefix="rl" x_pos="-0.057" y_pos="0.106"  mesh_file="wheel.stl"/>
+  <xacro:mecanum_wheel prefix="rr" x_pos="-0.057" y_pos="-0.106" mesh_file="wheel.stl"/>
 
-  <!-- SENSORES -->
-  <link name="camera_link"/><joint name="camera_joint" type="fixed"><parent link="base_link"/><child link="camera_link"/><origin xyz="0.114337 0.0 0.190199" rpy="0.0 -0.10472 0.0"/></joint>
-  <link name="camera_link_optical"/><joint name="camera_optical_joint" type="fixed"><parent link="camera_link"/><child link="camera_link_optical"/><origin xyz="0 0 0" rpy="-1.570796 0 -1.570796"/></joint>
-  <link name="lidar_link"/><joint name="lidar_joint" type="fixed"><parent link="base_link"/><child link="lidar_link"/><origin xyz="0.000001 -0.000037 0.245700" rpy="0 0 0"/></joint>
-  <link name="imu_link"/><joint name="imu_joint" type="fixed"><parent link="base_link"/><child link="imu_link"/><origin xyz="0.052144 0.0 0.050044" rpy="0 0 0"/></joint>
-  <link name="ultrasonic_left_link"/><joint name="ultrasonic_left_joint" type="fixed"><parent link="base_link"/><child link="ultrasonic_left_link"/><origin xyz="0.0 0.093 -0.005204" rpy="0 0 1.570796"/></joint>
-  <link name="ultrasonic_right_link"/><joint name="ultrasonic_right_joint" type="fixed"><parent link="base_link"/><child link="ultrasonic_right_link"/><origin xyz="0.0 -0.093 -0.005204" rpy="0 0 -1.570796"/></joint>
+  <!-- 5. SENSORES -->
+  <link name="camera_link"/>
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="0.114337 0.0 0.190199" rpy="0.0 -0.10472 0.0"/>
+  </joint>
 
-  <!-- PLUGIN NATIVO DE GAZEBO HARMONIC (A PRUEBA DE FALLOS) -->
+  <link name="lidar_link"/>
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0.000001 -0.000037 0.245700" rpy="0 0 0"/>
+  </joint>
+
+  <link name="imu_link"/>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0.052144 0.0 0.050044" rpy="0 0 0"/>
+  </joint>
+
+  <link name="ultrasonic_left_link"/>
+  <joint name="ultrasonic_left_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="ultrasonic_left_link"/>
+    <origin xyz="0.0 0.093 -0.005204" rpy="0 0 1.570796"/>
+  </joint>
+
+  <link name="ultrasonic_right_link"/>
+  <joint name="ultrasonic_right_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="ultrasonic_right_link"/>
+    <origin xyz="0.0 -0.093 -0.005204" rpy="0 0 -1.570796"/>
+  </joint>
+
+  <!-- 6. PLUGINS NATIVOS DE GAZEBO HARMONIC -->
   <gazebo>
-    <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
-      <left_joint>fl_wheel_joint</left_joint>
-      <left_joint>rl_wheel_joint</left_joint>
-      <right_joint>fr_wheel_joint</right_joint>
-      <right_joint>rr_wheel_joint</right_joint>
+    <!-- 6.1 Controlador de Velocidad 3D Holonomico Exacto (Garantiza strafe y diagonales rectas) -->
+    <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+      <topic>/cmd_vel</topic>
+    </plugin>
+
+    <!-- 6.2 Odometria Real 3D (Publica /odom y /tf exactos incluso en strafe y diagonal) -->
+    <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+      <odom_frame>odom</odom_frame>
+      <robot_base_frame>base_footprint</robot_base_frame>
+      <odom_publish_frequency>50</odom_publish_frequency>
+      <odom_topic>/odom</odom_topic>
+      <tf_topic>/tf</tf_topic>
+      <dimensions>2</dimensions>
+    </plugin>
+
+    <!-- 6.3 Cinematica Inversa Mecanum (Hace girar las 4 ruedas a la velocidad y direccion real) -->
+    <plugin filename="gz-sim-mecanum-drive-system" name="gz::sim::systems::MecanumDrive">
+      <front_left_joint>fl_wheel_joint</front_left_joint>
+      <front_right_joint>fr_wheel_joint</front_right_joint>
+      <back_left_joint>rl_wheel_joint</back_left_joint>
+      <back_right_joint>rr_wheel_joint</back_right_joint>
       <wheel_separation>0.212</wheel_separation>
+      <wheelbase>0.114</wheelbase>
       <wheel_radius>0.029</wheel_radius>
-      <max_linear_acceleration>1.0</max_linear_acceleration>
-      <min_linear_acceleration>-1.0</min_linear_acceleration>
-      <max_angular_acceleration>2.0</max_angular_acceleration>
-      <min_angular_acceleration>-2.0</min_angular_acceleration>
-      <max_linear_velocity>1.0</max_linear_velocity>
-      <min_linear_velocity>-1.0</min_linear_velocity>
-      <max_angular_velocity>2.0</max_angular_velocity>
-      <min_angular_velocity>-2.0</min_angular_velocity>
-      <topic>cmd_vel</topic>
-      <odom_topic>odom</odom_topic>
-      <frame_id>odom</frame_id>
-      <child_frame_id>base_footprint</child_frame_id>
+      <min_acceleration>-5</min_acceleration>
+      <max_acceleration>5</max_acceleration>
+      <topic>/cmd_vel</topic>
+      <odom_topic>/mecanum_wheel_odom_unused</odom_topic>
+      <tf_topic>/mecanum_tf_unused</tf_topic>
+    </plugin>
+
+    <!-- 6.4 Publicador de estado de las juntas para RViz -->
+    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
+      <joint_name>fl_wheel_joint</joint_name>
+      <joint_name>fr_wheel_joint</joint_name>
+      <joint_name>rl_wheel_joint</joint_name>
+      <joint_name>rr_wheel_joint</joint_name>
+      <joint_name>fork_joint</joint_name>
+    </plugin>
+
+    <!-- 6.5 Controlador de posicion para la horquilla -->
+    <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+      <joint_name>fork_joint</joint_name>
+      <topic>/fork_cmd</topic>
+      <p_gain>50</p_gain>
+      <i_gain>0.1</i_gain>
+      <d_gain>2.0</d_gain>
     </plugin>
   </gazebo>
+
 </robot>
