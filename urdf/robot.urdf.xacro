@@ -1,0 +1,186 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="mecanum_forklift_robot">
+
+  <!-- ================= MATERIALES VISUALES (RViz) ================= -->
+  <!-- Modificados para cumplir con tu paleta: chasis blanco, llantas gris oscuro, paleta gris claro -->
+  <material name="white"><color rgba="1.0 1.0 1.0 1.0"/></material>
+  <material name="dark_grey"><color rgba="0.2 0.2 0.2 1.0"/></material>
+  <material name="light_grey"><color rgba="0.7 0.7 0.7 1.0"/></material>
+
+  <!-- ================= 1. BASE FOOTPRINT (Al ras del suelo) ================= -->
+  <link name="base_footprint"/>
+
+  <!-- Radio de rueda = 29 mm (0.029 m) -> eleva el chasis exactamente al ras del suelo -->
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0.0 0.0 0.029" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ================= 2. CHASIS PRINCIPAL (base_link) ================= -->
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <!-- CORREGIDO: Ruta del paquete -->
+        <mesh filename="package://mi_montacargas/meshes/base_link.stl" scale="1 1 1"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+
+    <!-- Caja de colision: 180x180x258 mm. Su centro en Z esta a la mitad (0.129 m) -->
+    <!-- Deja exactamente los 4 mm libres respecto a la cara interna de las ruedas (94 mm vs 90 mm) -->
+    <collision>
+      <origin xyz="0.0 0.0 0.129" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.180 0.180 0.258"/>
+      </geometry>
+    </collision>
+
+    <!-- Inercia de Inventor (1.224 kg) convertida de kg*mm^2 a kg*m^2 -->
+    <inertial>
+      <origin xyz="0.004392 0.000901 0.097727" rpy="0 0 0"/>
+      <mass value="1.224"/>
+      <inertia ixx="0.011928" ixy="0.0" ixz="0.0"
+               iyy="0.012725" iyz="0.0"
+               izz="0.007489"/>
+    </inertial>
+  </link>
+
+  <!-- ================= 3. PALETA / HORQUILLA ELEVADORA (fork_link) ================= -->
+  <link name="fork_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <!-- CORREGIDO: Ruta del paquete -->
+        <mesh filename="package://mi_montacargas/meshes/fork_link.stl" scale="1 1 1"/>
+      </geometry>
+      <material name="light_grey"/> <!-- Modificado: Gris claro -->
+    </visual>
+
+    <!-- Colision exacta usando la malla STL de la paleta para respetar el hueco entre unas -->
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <!-- CORREGIDO: Ruta del paquete -->
+        <mesh filename="package://mi_montacargas/meshes/fork_link.stl" scale="1 1 1"/>
+      </geometry>
+    </collision>
+
+    <!-- Masa = 0.051 kg. CoG local compensado respecto al origen del joint (80, 0, 10 mm) -->
+    <inertial>
+      <origin xyz="0.029416 -0.000966 -0.017260" rpy="0 0 0"/>
+      <mass value="0.051"/>
+      <inertia ixx="0.00001971" ixy="0.0" ixz="0.0"
+               iyy="0.00007343" iyz="0.0"
+               izz="0.00008768"/>
+    </inertial>
+  </link>
+
+  <!-- Recorrido vertical de hasta 158 mm (0.158 m). Fuerza (10 N) para alzar los 100g de carga + 50g de paleta -->
+  <joint name="fork_joint" type="prismatic">
+    <parent link="base_link"/>
+    <child link="fork_link"/>
+    <origin xyz="0.080 0.0 0.010" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="0.0" upper="0.158" effort="10.0" velocity="0.15"/>
+    <dynamics damping="0.5" friction="0.1"/>
+  </joint>
+
+  <!-- ================= 4. MACRO PARA LAS 4 RUEDAS MECANUM ================= -->
+  <!-- Diametro: 58 mm (r=0.029 m), Ancho: 24 mm (0.024 m), Masa real: 50g (0.050 kg) -->
+  <xacro:macro name="mecanum_wheel" params="prefix x_pos y_pos">
+    <link name="${prefix}_wheel_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <!-- CORREGIDO: Ruta del paquete -->
+          <mesh filename="package://mi_montacargas/meshes/wheel.stl" scale="1 1 1"/>
+        </geometry>
+        <material name="dark_grey"/>
+      </visual>
+
+      <!-- Cilindro rotado 90 grados en X (1.570796 rad) para alinear su eje con Y -->
+      <collision>
+        <origin xyz="0 0 0" rpy="1.570796 0 0"/>
+        <geometry>
+          <cylinder radius="0.029" length="0.024"/>
+        </geometry>
+      </collision>
+
+      <!-- Inercia escalada proporcionalmente de 27g a 50g reales -->
+      <inertial>
+        <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+        <mass value="0.050"/>
+        <inertia ixx="0.00001252" ixy="0.0" ixz="0.0"
+                 iyy="0.00001976" iyz="0.0"
+                 izz="0.00001252"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${prefix}_wheel_link"/>
+      <origin xyz="${x_pos} ${y_pos} 0.0" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <dynamics damping="0.05" friction="0.05"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- Instancias de las 4 ruedas -->
+  <xacro:mecanum_wheel prefix="fl" x_pos="0.057"  y_pos="0.106"/>
+  <xacro:mecanum_wheel prefix="fr" x_pos="0.057"  y_pos="-0.106"/>
+  <xacro:mecanum_wheel prefix="rl" x_pos="-0.057" y_pos="0.106"/>
+  <xacro:mecanum_wheel prefix="rr" x_pos="-0.057" y_pos="-0.106"/>
+
+  <!-- ================= 5. SENSORES (Ghost Links) ================= -->
+
+  <!-- 5.1 CAMARA: Elevada 6 grados hacia arriba (Pitch = -6 deg = -0.10472 rad) -->
+  <link name="camera_link"/>
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="0.114337 0.0 0.190199" rpy="0.0 -0.10472 0.0"/>
+  </joint>
+
+  <!-- Frame optico estandar para OpenCV / YOLOv8 (Z hacia adelante, X derecha, Y abajo) -->
+  <link name="camera_link_optical"/>
+  <joint name="camera_optical_joint" type="fixed">
+    <parent link="camera_link"/>
+    <child link="camera_link_optical"/>
+    <origin xyz="0 0 0" rpy="-1.570796 0 -1.570796"/>
+  </joint>
+
+  <!-- 5.2 LIDAR SUPERIOR -->
+  <link name="lidar_link"/>
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0.000001 -0.000037 0.245700" rpy="0 0 0"/>
+  </joint>
+
+  <!-- 5.3 IMU (MPU6050) -->
+  <link name="imu_link"/>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0.052144 0.0 0.050044" rpy="0 0 0"/>
+  </joint>
+
+  <!-- 5.4 ULTRASONICO IZQUIERDO (Apunta a +Y -> Yaw = +90 deg = +1.570796 rad) -->
+  <link name="ultrasonic_left_link"/>
+  <joint name="ultrasonic_left_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="ultrasonic_left_link"/>
+    <origin xyz="0.0 0.093 -0.005204" rpy="0 0 1.570796"/>
+  </joint>
+
+  <!-- 5.5 ULTRASONICO DERECHO (Apunta a -Y -> Yaw = -90 deg = -1.570796 rad) -->
+  <link name="ultrasonic_right_link"/>
+  <joint name="ultrasonic_right_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="ultrasonic_right_link"/>
+    <origin xyz="0.0 -0.093 -0.005204" rpy="0 0 -1.570796"/>
+  </joint>
+
+</robot>
