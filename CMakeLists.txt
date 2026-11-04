@@ -23,12 +23,12 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-install(DIRECTORY launch urdf config worlds worlds
+install(DIRECTORY launch config rviz urdf config worlds worlds
   DESTINATION share/${PROJECT_NAME}
 )
 ament_package()
 
-install(DIRECTORY launch urdf meshes
+install(DIRECTORY launch config rviz urdf meshes
   DESTINATION share/${PROJECT_NAME}
 )
 install(PROGRAMS

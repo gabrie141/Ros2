@@ -1,120 +1,93 @@
 <?xml version="1.0"?>
-<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="mecanum_forklift_robot">
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:gz="http://gazebosim.org/schema" name="mi_montacargas">
 
-  <!-- ================= MATERIALES VISUALES (RViz) ================= -->
-  <!-- Modificados para cumplir con tu paleta: chasis blanco, llantas gris oscuro, paleta gris claro -->
-  <material name="white"><color rgba="1.0 1.0 1.0 1.0"/></material>
-  <material name="dark_grey"><color rgba="0.2 0.2 0.2 1.0"/></material>
-  <material name="light_grey"><color rgba="0.7 0.7 0.7 1.0"/></material>
+  <!-- MATERIALES VISUALES -->
+  <material name="chassis_white"><color rgba="0.92 0.92 0.95 1.0"/></material>
+  <material name="palette_grey"><color rgba="0.55 0.55 0.58 1.0"/></material>
+  <material name="wheel_dark"><color rgba="0.12 0.12 0.12 1.0"/></material>
 
-  <!-- ================= 1. BASE FOOTPRINT (Al ras del suelo) ================= -->
+  <!-- 1. BASE FOOTPRINT -->
   <link name="base_footprint"/>
 
-  <!-- Radio de rueda = 29 mm (0.029 m) -> eleva el chasis exactamente al ras del suelo -->
   <joint name="base_footprint_joint" type="fixed">
     <parent link="base_footprint"/>
     <child link="base_link"/>
     <origin xyz="0.0 0.0 0.029" rpy="0 0 0"/>
   </joint>
 
-  <!-- ================= 2. CHASIS PRINCIPAL (base_link) ================= -->
+  <!-- 2. CHASIS PRINCIPAL -->
   <link name="base_link">
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <!-- CORREGIDO: Ruta del paquete -->
         <mesh filename="package://mi_montacargas/meshes/base_link.stl" scale="1 1 1"/>
       </geometry>
-      <material name="white"/>
+      <material name="chassis_white"/>
     </visual>
-
-    <!-- Caja de colision: 180x180x258 mm. Su centro en Z esta a la mitad (0.129 m) -->
-    <!-- Deja exactamente los 4 mm libres respecto a la cara interna de las ruedas (94 mm vs 90 mm) -->
     <collision>
       <origin xyz="0.0 0.0 0.129" rpy="0 0 0"/>
       <geometry>
         <box size="0.180 0.180 0.258"/>
       </geometry>
     </collision>
-
-    <!-- Inercia de Inventor (1.224 kg) convertida de kg*mm^2 a kg*m^2 -->
     <inertial>
-      <origin xyz="0.004392 0.000901 0.097727" rpy="0 0 0"/>
+      <origin xyz="0.0 0.0 0.097727" rpy="0 0 0"/>
       <mass value="1.224"/>
-      <inertia ixx="0.011928" ixy="0.0" ixz="0.0"
-               iyy="0.012725" iyz="0.0"
-               izz="0.007489"/>
+      <inertia ixx="0.011928" ixy="0.0" ixz="0.0" iyy="0.012725" iyz="0.0" izz="0.007489"/>
     </inertial>
   </link>
 
-  <!-- ================= 3. PALETA / HORQUILLA ELEVADORA (fork_link) ================= -->
+  <!-- 3. PALETA ELEVADORA -->
   <link name="fork_link">
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <!-- CORREGIDO: Ruta del paquete -->
         <mesh filename="package://mi_montacargas/meshes/fork_link.stl" scale="1 1 1"/>
       </geometry>
-      <material name="light_grey"/> <!-- Modificado: Gris claro -->
+      <material name="palette_grey"/>
     </visual>
-
-    <!-- Colision exacta usando la malla STL de la paleta para respetar el hueco entre unas -->
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <!-- CORREGIDO: Ruta del paquete -->
         <mesh filename="package://mi_montacargas/meshes/fork_link.stl" scale="1 1 1"/>
       </geometry>
     </collision>
-
-    <!-- Masa = 0.051 kg. CoG local compensado respecto al origen del joint (80, 0, 10 mm) -->
     <inertial>
-      <origin xyz="0.029416 -0.000966 -0.017260" rpy="0 0 0"/>
+      <origin xyz="0.029416 0.0 -0.017260" rpy="0 0 0"/>
       <mass value="0.051"/>
-      <inertia ixx="0.00001971" ixy="0.0" ixz="0.0"
-               iyy="0.00007343" iyz="0.0"
-               izz="0.00008768"/>
+      <inertia ixx="0.00001971" ixy="0.0" ixz="0.0" iyy="0.00007343" iyz="0.0" izz="0.00008768"/>
     </inertial>
   </link>
 
-  <!-- Recorrido vertical de hasta 158 mm (0.158 m). Fuerza (10 N) para alzar los 100g de carga + 50g de paleta -->
   <joint name="fork_joint" type="prismatic">
     <parent link="base_link"/>
     <child link="fork_link"/>
     <origin xyz="0.080 0.0 0.010" rpy="0 0 0"/>
     <axis xyz="0 0 1"/>
-    <limit lower="0.0" upper="0.158" effort="10.0" velocity="0.15"/>
+    <limit lower="0.0" upper="0.158" effort="20.0" velocity="0.15"/>
     <dynamics damping="0.5" friction="0.1"/>
   </joint>
 
-  <!-- ================= 4. MACRO PARA LAS 4 RUEDAS MECANUM ================= -->
-  <!-- Diametro: 58 mm (r=0.029 m), Ancho: 24 mm (0.024 m), Masa real: 50g (0.050 kg) -->
-  <xacro:macro name="mecanum_wheel" params="prefix x_pos y_pos">
+  <!-- 4. MACRO PARA LAS 4 RUEDAS MECANUM -->
+  <xacro:macro name="mecanum_wheel" params="prefix x_pos y_pos mesh_file">
     <link name="${prefix}_wheel_link">
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <!-- CORREGIDO: Ruta del paquete -->
-          <mesh filename="package://mi_montacargas/meshes/wheel.stl" scale="1 1 1"/>
+          <mesh filename="package://mi_montacargas/meshes/${mesh_file}" scale="1 1 1"/>
         </geometry>
-        <material name="dark_grey"/>
+        <material name="wheel_dark"/>
       </visual>
-
-      <!-- Cilindro rotado 90 grados en X (1.570796 rad) para alinear su eje con Y -->
       <collision>
         <origin xyz="0 0 0" rpy="1.570796 0 0"/>
         <geometry>
           <cylinder radius="0.029" length="0.024"/>
         </geometry>
       </collision>
-
-      <!-- Inercia escalada proporcionalmente de 27g a 50g reales -->
       <inertial>
         <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
         <mass value="0.050"/>
-        <inertia ixx="0.00001252" ixy="0.0" ixz="0.0"
-                 iyy="0.00001976" iyz="0.0"
-                 izz="0.00001252"/>
+        <inertia ixx="0.00001252" ixy="0.0" ixz="0.0" iyy="0.00001976" iyz="0.0" izz="0.00001252"/>
       </inertial>
     </link>
 
@@ -123,19 +96,22 @@
       <child link="${prefix}_wheel_link"/>
       <origin xyz="${x_pos} ${y_pos} 0.0" rpy="0 0 0"/>
       <axis xyz="0 1 0"/>
-      <dynamics damping="0.05" friction="0.05"/>
+      <limit effort="20.0" velocity="20.0"/>
+      <dynamics damping="0.01" friction="0.0"/>
     </joint>
+
+    <gazebo reference="${prefix}_wheel_link">
+      <mu1>0.0</mu1>
+      <mu2>0.0</mu2>
+    </gazebo>
   </xacro:macro>
 
-  <!-- Instancias de las 4 ruedas -->
-  <xacro:mecanum_wheel prefix="fl" x_pos="0.057"  y_pos="0.106"/>
-  <xacro:mecanum_wheel prefix="fr" x_pos="0.057"  y_pos="-0.106"/>
-  <xacro:mecanum_wheel prefix="rl" x_pos="-0.057" y_pos="0.106"/>
-  <xacro:mecanum_wheel prefix="rr" x_pos="-0.057" y_pos="-0.106"/>
+  <xacro:mecanum_wheel prefix="fl" x_pos="0.057"  y_pos="0.106"  mesh_file="wheel.stl"/>
+  <xacro:mecanum_wheel prefix="fr" x_pos="0.057"  y_pos="-0.106" mesh_file="wheel.stl"/>
+  <xacro:mecanum_wheel prefix="rl" x_pos="-0.057" y_pos="0.106"  mesh_file="wheel.stl"/>
+  <xacro:mecanum_wheel prefix="rr" x_pos="-0.057" y_pos="-0.106" mesh_file="wheel.stl"/>
 
-  <!-- ================= 5. SENSORES (Ghost Links) ================= -->
-
-  <!-- 5.1 CAMARA: Elevada 6 grados hacia arriba (Pitch = -6 deg = -0.10472 rad) -->
+  <!-- 5. LINKS DE SENSORES -->
   <link name="camera_link"/>
   <joint name="camera_joint" type="fixed">
     <parent link="base_link"/>
@@ -143,15 +119,6 @@
     <origin xyz="0.114337 0.0 0.190199" rpy="0.0 -0.10472 0.0"/>
   </joint>
 
-  <!-- Frame optico estandar para OpenCV / YOLOv8 (Z hacia adelante, X derecha, Y abajo) -->
-  <link name="camera_link_optical"/>
-  <joint name="camera_optical_joint" type="fixed">
-    <parent link="camera_link"/>
-    <child link="camera_link_optical"/>
-    <origin xyz="0 0 0" rpy="-1.570796 0 -1.570796"/>
-  </joint>
-
-  <!-- 5.2 LIDAR SUPERIOR -->
   <link name="lidar_link"/>
   <joint name="lidar_joint" type="fixed">
     <parent link="base_link"/>
@@ -159,7 +126,6 @@
     <origin xyz="0.000001 -0.000037 0.245700" rpy="0 0 0"/>
   </joint>
 
-  <!-- 5.3 IMU (MPU6050) -->
   <link name="imu_link"/>
   <joint name="imu_joint" type="fixed">
     <parent link="base_link"/>
@@ -167,7 +133,6 @@
     <origin xyz="0.052144 0.0 0.050044" rpy="0 0 0"/>
   </joint>
 
-  <!-- 5.4 ULTRASONICO IZQUIERDO (Apunta a +Y -> Yaw = +90 deg = +1.570796 rad) -->
   <link name="ultrasonic_left_link"/>
   <joint name="ultrasonic_left_joint" type="fixed">
     <parent link="base_link"/>
@@ -175,7 +140,6 @@
     <origin xyz="0.0 0.093 -0.005204" rpy="0 0 1.570796"/>
   </joint>
 
-  <!-- 5.5 ULTRASONICO DERECHO (Apunta a -Y -> Yaw = -90 deg = -1.570796 rad) -->
   <link name="ultrasonic_right_link"/>
   <joint name="ultrasonic_right_joint" type="fixed">
     <parent link="base_link"/>
@@ -183,4 +147,178 @@
     <origin xyz="0.0 -0.093 -0.005204" rpy="0 0 -1.570796"/>
   </joint>
 
+  <!-- 6. PLUGINS DE MOVIMIENTO, ODOMETRIA Y SENSORES DE GAZEBO HARMONIC -->
+  <gazebo>
+    <!-- Motor global de sensores (Indispensable para que LiDAR y Camara publiquen datos) -->
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <!-- Motor global de IMU -->
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
+
+    <!-- Control de velocidad holonomico -->
+    <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+      <topic>/cmd_vel</topic>
+    </plugin>
+
+    <!-- Publicador de Odometria y TF (odom -> base_footprint) -->
+    <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+      <odom_frame>odom</odom_frame>
+      <robot_base_frame>base_footprint</robot_base_frame>
+      <odom_publish_frequency>50</odom_publish_frequency>
+      <odom_topic>/odom</odom_topic>
+      <tf_topic>/tf</tf_topic>
+      <dimensions>2</dimensions>
+    </plugin>
+
+    <!-- Cinematica de giro de las 4 ruedas -->
+    <plugin filename="gz-sim-mecanum-drive-system" name="gz::sim::systems::MecanumDrive">
+      <front_left_joint>fl_wheel_joint</front_left_joint>
+      <front_right_joint>fr_wheel_joint</front_right_joint>
+      <back_left_joint>rl_wheel_joint</back_left_joint>
+      <back_right_joint>rr_wheel_joint</back_right_joint>
+      <wheel_separation>0.212</wheel_separation>
+      <wheelbase>0.114</wheelbase>
+      <wheel_radius>0.029</wheel_radius>
+      <min_acceleration>-5</min_acceleration>
+      <max_acceleration>5</max_acceleration>
+      <topic>/cmd_vel</topic>
+      <odom_topic>/mecanum_odom_unused</odom_topic>
+      <tf_topic>/mecanum_tf_unused</tf_topic>
+    </plugin>
+
+    <!-- Publicador de articulaciones en topico fijo /joint_states (Corrige ruedas y paleta en RViz) -->
+    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
+      <topic>/joint_states</topic>
+      <joint_name>fl_wheel_joint</joint_name>
+      <joint_name>fr_wheel_joint</joint_name>
+      <joint_name>rl_wheel_joint</joint_name>
+      <joint_name>rr_wheel_joint</joint_name>
+      <joint_name>fork_joint</joint_name>
+    </plugin>
+
+    <!-- Controlador de la horquilla -->
+    <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+      <joint_name>fork_joint</joint_name>
+      <topic>/fork_cmd</topic>
+      <p_gain>50</p_gain>
+      <i_gain>0.1</i_gain>
+      <d_gain>2.0</d_gain>
+    </plugin>
+  </gazebo>
+
+  <!-- 7. DEFINICION DE SENSORES -->
+  <gazebo reference="lidar_link">
+    <sensor name="lidar_sensor" type="gpu_lidar">
+      <topic>/scan</topic>
+      <update_rate>10</update_rate>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>360</samples>
+            <resolution>1</resolution>
+            <min_angle>-3.14159</min_angle>
+            <max_angle>3.14159</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.12</min>
+          <max>8.0</max>
+        </range>
+      </ray>
+      <always_on>true</always_on>
+      <visualize>true</visualize>
+    </sensor>
+  </gazebo>
+
+  <gazebo reference="ultrasonic_left_link">
+    <sensor name="sonar_left" type="gpu_lidar">
+      <topic>/ultrasonic_left/scan</topic>
+      <update_rate>5</update_rate>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>10</samples>
+            <min_angle>-0.26</min_angle>
+            <max_angle>0.26</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.05</min>
+          <max>4.0</max>
+        </range>
+      </ray>
+      <always_on>true</always_on>
+      <visualize>true</visualize>
+    </sensor>
+  </gazebo>
+
+  <gazebo reference="ultrasonic_right_link">
+    <sensor name="sonar_right" type="gpu_lidar">
+      <topic>/ultrasonic_right/scan</topic>
+      <update_rate>5</update_rate>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>10</samples>
+            <min_angle>-0.26</min_angle>
+            <max_angle>0.26</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.05</min>
+          <max>4.0</max>
+        </range>
+      </ray>
+      <always_on>true</always_on>
+      <visualize>true</visualize>
+    </sensor>
+  </gazebo>
+
+  <gazebo reference="camera_link">
+    <sensor name="camera_sensor" type="camera">
+      <topic>/camera/image_raw</topic>
+      <update_rate>15</update_rate>
+      <camera>
+        <horizontal_fov>1.047</horizontal_fov>
+        <image>
+          <width>640</width>
+          <height>480</height>
+          <format>R8G8B8</format>
+        </image>
+        <clip>
+          <near>0.05</near>
+          <far>8.0</far>
+        </clip>
+      </camera>
+      <always_on>true</always_on>
+      <visualize>true</visualize>
+    </sensor>
+  </gazebo>
+
+  <gazebo reference="imu_link">
+    <sensor name="imu_sensor" type="imu">
+      <topic>/imu/data</topic>
+      <update_rate>50</update_rate>
+      <always_on>true</always_on>
+      <visualize>true</visualize>
+    </sensor>
+  </gazebo>
+
+  <gazebo reference="lidar_joint">
+    <preserveFixedJoint>true</preserveFixedJoint>
+  </gazebo>
+  <gazebo reference="camera_joint">
+    <preserveFixedJoint>true</preserveFixedJoint>
+  </gazebo>
+  <gazebo reference="imu_joint">
+    <preserveFixedJoint>true</preserveFixedJoint>
+  </gazebo>
+  <gazebo reference="ultrasonic_left_joint">
+    <preserveFixedJoint>true</preserveFixedJoint>
+  </gazebo>
+  <gazebo reference="ultrasonic_right_joint">
+    <preserveFixedJoint>true</preserveFixedJoint>
+  </gazebo>
 </robot>
