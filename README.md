@@ -1,89 +1,87 @@
-# 🤖 Simulación de Montacargas Mecanum (Gemelo Digital ABET)
+# Simulacion de Montacargas Mecanum (Gemelo Digital)
 
-Repositorio oficial del proyecto de gemelo digital para la simulación física y cinemática de un montacargas omnidireccional con ruedas Mecanum[cite: 7]. Desarrollado para **ROS 2 Jazzy** y **Gazebo Harmonic** sobre **Ubuntu 24.04**.
+Repositorio oficial del proyecto de gemelo digital para la simulacion fisica y cinematica de un montacargas omnidireccional con ruedas Mecanum. Desarrollado para ROS 2 Jazzy y Gazebo Harmonic sobre Ubuntu 24.04.
 
----
+## 1. Requerimientos e Instalacion
 
-## 📋 1. Requerimientos del Sistema
+Para ejecutar este entorno en una maquina limpia, asegurate de tener Ubuntu 24.04 y ejecuta los siguientes comandos para instalar ROS 2 Jazzy, Gazebo, SLAM Toolbox y las herramientas necesarias:
 
-Para ejecutar este entorno de simulación correctamente, tu equipo debe contar con lo siguiente:
-* **Sistema Operativo:** Ubuntu 24.04 LTS (Noble Numbat)
-* **Framework:** ROS 2 Jazzy Jalisco
-* **Simulador:** Gazebo Harmonic (`gz-sim 8`) con motor de físicas DART
-* **Herramientas y Dependencias de ROS 2:**
-  * `colcon` (Build tool de ROS 2)
-  * `ros-jazzy-ros-gz` (Puente de integración ROS 2 - Gazebo)
-  * `xacro` (Procesador de macros URDF)
-  * `teleop_twist_keyboard` (Para control manual por teclado)
+    sudo apt update
+    sudo apt install -y ros-jazzy-desktop ros-jazzy-ros-gz ros-jazzy-xacro git-lfs
+    sudo apt install -y ros-jazzy-slam-toolbox ros-jazzy-teleop-twist-keyboard ros-jazzy-rviz-imu-plugin
 
----
+Inicializa Git LFS para descargar correctamente los modelos 3D (.stl):
 
-## ⚙️ 2. Guía de Clonación e Instalación en una Nueva Computadora
+    git lfs install
 
-Si estás configurando este repositorio en una máquina limpia, abre tu terminal y sigue estos pasos:
+## 2. Compilacion del Workspace
 
-### 2.1. Instalar dependencias base de ROS 2 Jazzy y Gazebo
-Asegúrate de tener instalado el escritorio de ROS 2 Jazzy junto con los paquetes de simulación y herramientas[cite: 6]:
-```bash
-sudo apt update && sudo apt install -y ros-jazzy-desktop ros-jazzy-ros-gz ros-jazzy-xacro git-lfs
-2.2. Clonar el repositorio y configurar Git LFS
-Dado que los modelos 3D (.stl) de las mallas están gestionados mediante Git LFS debido a su peso, inicializa LFS en tu equipo antes de clonar:
+Si acabas de clonar el repositorio, compila el paquete y carga el entorno:
 
-Bash
-git lfs install
-Crea tu espacio de trabajo (workspace) de ROS 2 y clona el proyecto:
+    cd ~/ros2_intro
+    colcon build --symlink-install
+    source install/setup.bash
 
-Bash
-mkdir -p ~/ros2_ws/src
-cd ~/ros2_ws/src
-git clone [https://github.com/gabrie141/Ros2.git](https://github.com/gabrie141/Ros2.git) .
-git lfs pull
-2.3. Compilar el Workspace
-Bash
-cd ~/ros2_ws
-colcon build --symlink-install
-source install/setup.bash
-(Opcional) Para evitar tener que escribir source install/setup.bash en cada terminal nueva, puedes agregarlo a tu archivo de configuración global:
+## 3. Ejecucion de la Simulacion
 
-Bash
-echo "source ~/ros2_ws/install/setup.bash" >> ~/.bashrc
-source ~/.bashrc
-🚀 3. Modo de Operación y Ejecución
-3.1. Iniciar la Simulación (Gazebo + RViz)
-Para levantar el gemelo digital completo con el mundo virtual en Gazebo Harmonic, la visualización de los marcos en RViz y la carga del URDF parametrizado, ejecuta:
+El proyecto cuenta con dos archivos launch principales, disenados para evaluar diferentes partes del sistema.
 
-Bash
-ros2 launch mi_montacargas gazebo.launch.py
-3.2. Control de Movimiento (Omnidireccional / Holonómico)
-El robot utiliza tracción Mecanum real, lo que le permite desplazarse hacia adelante, atrás, girar e incluso realizar traslaciones laterales (strafe) y en diagonal.
+### 3.1. Simulacion Base y Movimiento (URDF)
 
-Control con Teclado (Modo Holonómico con Shift):
-Abre una nueva terminal y lanza el nodo de teleoperación:
+Para visualizar el robot, su estructura URDF, las fisicas y mover el montacargas en el mundo de Gazebo, ejecuta:
 
-Bash
-ros2 run teleop_twist_keyboard teleop_twist_keyboard
-Nota de operación: Para activar el movimiento lateral (strafe), debes mantener presionada la tecla Shift de tu teclado junto con las teclas asignadas (Shift + J para la izquierda, Shift + L para la derecha).
+    ros2 launch mi_montacargas gazebo.launch.py
 
-Pruebas directas mediante comandos de Tópicos (/cmd_vel):
+Control de Movimiento (Teleoperacion): Abre una nueva terminal y ejecuta el nodo de teleoperacion. Las ruedas Mecanum permiten movimiento holonomico. Para moverte de lado, manten presionada la tecla Shift y usa las teclas J o L.
 
-Desplazamiento lateral puro a la izquierda (+Y):
+    ros2 run teleop_twist_keyboard teleop_twist_keyboard
 
-Bash
-ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.0, y: 0.25, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}" -r 10
-Movimiento en diagonal a 45°:
+Control de la Paleta Elevadora (Eje Prismatico): Para subir o bajar la horquilla, envia un mensaje directo al controlador de posicion (el valor maximo es 0.158 metros):
 
-Bash
-ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.20, y: 0.20, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}" -r 10
-Control de la Paleta Elevadora (Eje Prismático):
-Puedes gobernar la altura del sistema de elevación enviando un comando directo al tópico del controlador de posición:
+    gz topic -t /fork_cmd -m gz.msgs.Double -p 'data: 0.12'
 
-Bash
-gz topic -t /fork_cmd -m gz.msgs.Double -p 'data: 0.12'
-📂 4. Estructura del Repositorio
-mi_montacargas/meshes/: Almacena los modelos CAD en formato .stl (chasis, horquilla y ruedas Mecanum).
+### 3.2. Simulacion de Sensores y Mapeo SLAM
 
-mi_montacargas/urdf/: Modelos XACRO con la estructuración de eslabones, colisiones simplificadas y matrices de inercia calculadas.
+Para iniciar el entorno completo (Gazebo, sensores, SLAM Toolbox y RViz), ejecuta:
 
-mi_montacargas/launch/: Archivos de automatización de arranque (gazebo.launch.py).
+    ros2 launch mi_montacargas slam_mapping.launch.py
 
-mi_montacargas/config/: Archivos YAML de configuración de controladores y puentes ROS-Gazebo.
+## 4. Visualizacion de Sensores en RViz
+
+Cuando se abre RViz mediante el launch de mapeo, los datos de los sensores estan disponibles, pero requieren ciertas configuraciones visuales:
+
+1. Politica de Calidad (QoS): Los sensores de Gazebo publican a alta velocidad usando "Best Effort". Si un display en RViz se muestra vacio o con "0 points", debes desplegar las opciones del display, ir a la pestana Topic y cambiar Reliability Policy de "Reliable" a "Best Effort".
+2. Transformadas (TF): Gazebo nombra los frames de los sensores de forma interna (por ejemplo, mi_montacargas/ultrasonic_right_link/sonar_right). Para que RViz pueda dibujarlos, el archivo slam_mapping.launch.py inyecta automaticamente nodos static_transform_publisher que conectan los frames del URDF con los frames internos de Gazebo.
+3. IMU: Para visualizar el sensor inercial, se debe agregar el display "Imu" en RViz. Se recomienda desactivar la opcion "Enable acceleration" y activar "Enable axes" para ver los ejes XYZ rotar con el robot en tiempo real.
+
+## 5. Proceso de Mapeo SLAM
+
+El mapeo se realiza exclusivamente utilizando los datos del LiDAR (topico /scan). El algoritmo SLAM Toolbox procesa estos datos para construir un mapa de ocupacion en tiempo real.
+
+Pasos para mapear:
+1. Inicia el launch de mapeo.
+2. En RViz, cambia el "Fixed Frame" de odom a map.
+3. En el panel de Displays, activa la casilla del display Map (topico /map).
+4. Abre una terminal y mueve el robot con el teclado.
+5. A medida que el robot explora el mundo, veras como las paredes y obstaculos se dibujan en el mapa.
+
+Para guardar el mapa generado al finalizar la exploracion:
+
+    ros2 run nav2_map_server map_saver_cli -f ~/mi_mapa_generado
+
+## 6. Modelo Fisico y Gemelo Digital
+
+Para garantizar que la simulacion sea un reflejo fiel del hardware real, se implementaron las siguientes caracteristicas:
+
+- Sensores preservados: El URDF incluye bloques de inercia en los links de los sensores. Sin esto, Gazebo Harmonic descarta los links sin masa y elimina los sensores asociados.
+- IMU Realista: El sensor inercial lee el vector de gravedad en el eje Z y se le inyecto un modelo de ruido gaussiano basado en las hojas de datos de un chip MPU6050.
+- Mundo Optimizado: El archivo del mundo tiene las sombras desactivadas y la cuadricula apagada para reducir la latencia del renderizado.
+
+## 7. Estructura del Repositorio
+
+- config/: Archivos YAML para el puente ROS-Gazebo y los parametros de SLAM.
+- launch/: Archivos de arranque de ROS 2.
+- meshes/: Modelos 3D en formato STL (gestionados con Git LFS).
+- rviz/: Configuracion visual para el entorno de mapeo.
+- urdf/: Modelos XACRO con inercias, colisiones y definicion de sensores.
+- worlds/: Entorno de simulacion en formato SDF.
